@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -17,19 +18,24 @@ var cleanup_afterwards = true
 func main() {
 	defer handleExit() // Needs to be on top
 
-	files := removeEmptyLines(os.Args[1:])
+	// Flags
+	editor := flag.String("editor", "vim", "Which editor to use?")
+	flag.Parse()
+	files := flag.Args()
+
+	files = removeEmptyLines(files)
 	validateInput(files)
 	tmpfolder, filelist := getTmpFile(files)
 	defer cleanup(tmpfolder)
 
 	// Spawn Vim to edit the temporary file
-	cmd := exec.Command("vim", filelist)
+	cmd := exec.Command(*editor, filelist)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
-		fmt.Println("vim returned non 0. Aborting!", err)
+		fmt.Println("Editor returned non 0. Aborting!", err)
 		panic(Exit{1})
 	}
 
