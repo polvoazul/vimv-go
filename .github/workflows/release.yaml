@@ -1,0 +1,27 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: 'ubuntu-latest'
+    # runs-on: ${{ matrix.os }}
+    # strategy:
+      # matrix:
+        # os: ['ubuntu-latest', 'macOS-latest']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Go setup
+        uses: actions/setup-go@v5
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --clean
