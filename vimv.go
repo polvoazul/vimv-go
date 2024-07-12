@@ -58,6 +58,7 @@ func main() {
 			to_rename = append(to_rename, FilePair{from: files[i], to: new_filenames[i]})
 		}
 	}
+	assert_no_swap(to_rename)
 
 	report(to_rename)
 	errors := rename(to_rename)
@@ -66,6 +67,21 @@ func main() {
 	color.Green("Renamed %d files successfully.", len(to_rename)-len(errors))
 	if errors != nil {
 		color.Red("Error renaming %d files.", len(errors))
+	}
+}
+
+func assert_no_swap(to_rename []FilePair) {
+	names := make(map[string]int)
+	for _, pair := range to_rename {
+		names[pair.to]++
+		names[pair.from]++
+	}
+	for name := range names {
+		if names[name] > 0 {
+			cleanup_afterwards = false
+			fmt.Printf("Error: Filename being renamed already exists, swap is unsuported as of now: '%s'\n", name)
+			panic(Exit{1})
+		}
 	}
 }
 
@@ -178,6 +194,12 @@ func show_diff(pairs []FilePair) {
 func rename(to_rename []FilePair) []error {
 	var errs []error
 	for _, fp := range to_rename {
+		if _, err := os.Stat(fp.to); err == nil {
+			e := fmt.Errorf("destination file %s already exists", fp.to)
+			fmt.Println(e)
+			errs = append(errs, e)
+			continue
+		}
 		err := os.Rename(fp.from, fp.to)
 		if err != nil {
 			e := fmt.Errorf("error renaming %s to %s: %v", fp.from, fp.to, err)
