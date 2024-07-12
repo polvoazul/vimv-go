@@ -1,6 +1,6 @@
-# Vimv - A Tool for Renaming Files in Bulk
+# Vimv - Renaming Files in Bulk using vim
 
-Vimv is a command-line tool that allows you to rename multiple files at once using your favorite text editor, Vim. It is designed to simplify the process of renaming files in bulk, making it easier to manage your files and directories.
+Vimv is a command-line tool that allows you to rename multiple files at once using your favorite text editor, Vim.
 
 Inspired on [vimv](https://github.com/thameera/vimv), but I plan to add more features.
 
@@ -8,6 +8,7 @@ Inspired on [vimv](https://github.com/thameera/vimv), but I plan to add more fea
 
 * Supports renaming multiple files at once
 * Utilizes Vim for editing file names, allowing for powerful text manipulation capabilities
+* Shows colored diffs before applying changes
 * Provides a user-friendly interface for confirming changes before applying them
 
 ## Usage
@@ -24,11 +25,11 @@ This will open Vim with a list of the files, allowing you to edit their names as
     Work in progres...
 
 ### Manually:
-You can download it from here: https://github.com/polvoazul/vimv-go/releases, then add to somewhere in your path.
+You can download it from here: https://github.com/polvoazul/vimv-go/releases, then `chmod +x` it and add to somewhere in your path (like `/usr/local/bin/`).
 
 ## Contributing
 
-Contributions to Vimv are welcome! If you have any suggestions or bug fixes, please open an issue or submit a pull request on the project's GitHub page.
+Contributions to Vimv are welcome! If you have any suggestions or bug fixes, please open an issue or submit a pull request.
 
 
 ## License
