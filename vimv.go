@@ -6,13 +6,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 
+	"github.com/andreyvit/diff"
+	"github.com/fatih/color"
 	"github.com/jwalton/go-supportscolor"
 )
 
-var color = supportscolor.Stdout().SupportsColor
 var cleanup_afterwards = true
 
 func main() {
@@ -22,6 +24,8 @@ func main() {
 	editor := flag.String("editor", "vim", "Which editor to use?")
 	flag.Parse()
 	files := flag.Args()
+
+	color.NoColor = !supportscolor.Stdout().SupportsColor
 
 	files = removeEmptyLines(files)
 	validateInput(files)
@@ -59,17 +63,9 @@ func main() {
 	errors := rename(to_rename)
 
 	// Finalizing
-	if color {
-		fmt.Printf("\033[1;32mRenamed %d files successfully.\033[0m\n", len(to_rename)-len(errors))
-	} else {
-		fmt.Printf("Renamed %d files successfully.\n", len(to_rename)-len(errors))
-	}
+	color.Green("Renamed %d files successfully.", len(to_rename)-len(errors))
 	if errors != nil {
-		if color {
-			fmt.Printf("\033[1;31mError renaming %d files.\033[0m\n", len(errors))
-		} else {
-			fmt.Printf("Error renaming %d files.\n", len(errors))
-		}
+		color.Red("Error renaming %d files.", len(errors))
 	}
 }
 
@@ -79,26 +75,34 @@ type FilePair struct {
 }
 
 func report(to_rename []FilePair) {
-	if color {
-		fmt.Printf("\033[1;34mTotal files to be renamed: %d\033[0m\n", len(to_rename))
-	} else {
-		fmt.Printf("Total files to be renamed: %d\n", len(to_rename))
-	}
-
-	for _, fp := range to_rename {
-		if color {
-			fmt.Printf("\033[1;34m%s\033[0m -> \033[1;33m%s\033[0m\n", fp.from, fp.to)
-		} else {
-			fmt.Printf("%s -> %s\n", fp.from, fp.to)
-		}
-	}
-
+	color.Cyan("Total files to be renamed: %d", len(to_rename))
 	if len(to_rename) == 0 {
 		return
 	}
 
+	for _, fp := range to_rename {
+		fmt.Printf("%s -> %s\n", color.CyanString(fp.from), color.YellowString(fp.to))
+	}
+
+	for {
+		user_input := prompt_user()
+		if user_input == "yes" {
+			return
+		}
+		if user_input == "no" {
+			fmt.Println("Operation aborted by user.")
+			cleanup_afterwards = false
+			panic(Exit{1})
+		}
+		if user_input == "diff" {
+			show_diff(to_rename)
+		}
+	}
+}
+
+func prompt_user() string {
 	// Confirm
-	fmt.Print("Press '(y)' to continue, 'n' to abort: ")
+	fmt.Print("Press '(y)' to continue, 'd' to show name diff, 'n' to abort:")
 	var response string
 	_, err := fmt.Scanln(&response)
 	if err != nil {
@@ -107,10 +111,67 @@ func report(to_rename []FilePair) {
 			panic(Exit{1})
 		}
 	}
-	if strings.ToLower(response) != "y" && response != "" {
-		fmt.Println("Operation aborted by user.")
-		cleanup_afterwards = false
-		panic(Exit{1})
+	if strings.ToLower(response) == "y" || response == "" {
+		return "yes"
+	}
+	if strings.ToLower(response) == "d" {
+		return "diff"
+	}
+	// else
+	return "no"
+}
+
+func show_diff(pairs []FilePair) {
+	type Segment struct {
+		text  string
+		type_ string
+	}
+	// Create a list of ordered Segments. Types are +(added) ~(deleted) or =(common)
+	for _, fp := range pairs {
+		the_diff := diff.CharacterDiff(fp.from, fp.to)
+		var segments []Segment
+		re := regexp.MustCompile(`\(?(\+\+|~~)\)?`)
+		delimiters := re.FindAllStringIndex(the_diff, -1)
+		idx := 0
+		inside_delimiter := false
+		for _, delimiter := range delimiters {
+			var type_ string
+			if inside_delimiter {
+				type_ = string(the_diff[delimiter[0]+1]) // +1 to avoid brackets
+			} else {
+				type_ = "="
+			}
+			segments = append(segments, Segment{the_diff[idx:delimiter[0]], type_})
+			idx = delimiter[1]
+			inside_delimiter = !inside_delimiter
+		}
+		segments = append(segments, Segment{the_diff[idx:], "="})
+
+		// Print orig
+		fmt.Print(color.CyanString("From: "))
+		for _, seg := range segments {
+			switch seg.type_ {
+			case "+":
+				// noop
+			case "~":
+				fmt.Print(color.RedString(seg.text))
+			default:
+				fmt.Print(color.WhiteString(seg.text))
+			}
+		}
+		fmt.Println()
+		fmt.Print(color.YellowString("To:   "))
+		for _, seg := range segments {
+			switch seg.type_ {
+			case "+":
+				fmt.Print(color.GreenString(seg.text))
+			case "~":
+				// noop
+			default:
+				fmt.Print(color.WhiteString(seg.text))
+			}
+		}
+		fmt.Println()
 	}
 }
 
