@@ -28,8 +28,8 @@ func main() {
 	color.NoColor = !supportscolor.Stdout().SupportsColor
 
 	files = removeEmptyLines(files)
-	validateInput(files)
-	tmpfolder, filelist := getTmpFile(files)
+	files = validateInput(files)
+	tmpfolder, filelist := writeTmpFile(files)
 	defer cleanup(tmpfolder)
 
 	// Spawn Vim to edit the temporary file
@@ -188,7 +188,7 @@ func rename(to_rename []FilePair) []error {
 	return errs
 }
 
-func getTmpFile(files []string) (string, string) {
+func writeTmpFile(files []string) (string, string) {
 	// Create a temporary directory using os.MkdirTemp
 	tmpDir, err := os.MkdirTemp("", "vimv-")
 	if err != nil {
@@ -249,10 +249,14 @@ func validate(original []string, new []string) {
 	checkDuplicates(new)
 }
 
-func validateInput(files []string) {
+func validateInput(files []string) []string {
 	if len(files) == 0 {
-		fmt.Println("Error: No files provided")
-		panic(Exit{1})
+		var err error
+		files, err = filepath.Glob("./*")
+		if err != nil {
+			fmt.Println("Error listing files:", err)
+			panic(Exit{1})
+		}
 	}
 	for _, file := range files {
 		if _, err := os.Stat(file); os.IsNotExist(err) {
@@ -261,6 +265,7 @@ func validateInput(files []string) {
 		}
 	}
 	checkDuplicates(files)
+	return files
 }
 
 func checkDuplicates(new []string) {
