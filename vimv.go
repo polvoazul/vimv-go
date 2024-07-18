@@ -162,8 +162,7 @@ func show_diff(pairs []FilePair) {
 			inside_delimiter = !inside_delimiter
 		}
 		segments = append(segments, Segment{the_diff[idx:], "="})
-
-		// Print orig
+		// Print Original Filename
 		fmt.Print(color.CyanString("From: "))
 		for _, seg := range segments {
 			switch seg.type_ {
@@ -176,6 +175,7 @@ func show_diff(pairs []FilePair) {
 			}
 		}
 		fmt.Println()
+		// Print New Filename
 		fmt.Print(color.YellowString("To:   "))
 		for _, seg := range segments {
 			switch seg.type_ {
