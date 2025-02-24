@@ -65,23 +65,35 @@ func main() {
 
 	// Finalizing
 	color.Green("Renamed %d files successfully.", len(to_rename)-len(errors))
-	if errors != nil {
+	if len(errors) > 0 {
 		color.Red("Error renaming %d files.", len(errors))
 	}
 }
 
 func assert_no_swap(to_rename []FilePair) {
-	names := make(map[string]int)
+	targetNames := make(map[string]string)
+	sourceNames := make(map[string]bool)
+
+	// Create set of sources
 	for _, pair := range to_rename {
-		names[pair.to]++
-		names[pair.from]++
+		sourceNames[pair.from] = true
 	}
-	for name := range names {
-		if names[name] > 0 {
-			cleanup_afterwards = false
-			fmt.Printf("Error: Filename being renamed already exists, swap is unsuported as of now: '%s'\n", name)
-			panic(Exit{1})
+
+	for _, pair := range to_rename {
+		if pair.to == pair.from {
+			continue
 		}
+
+		// Check if the target name already exists as a source
+		if sourceNames[pair.to] {
+			die("Error: Filename '%s' is both a destination and a source, which is unsupported.\n", pair.to)
+		}
+
+		// Check for duplicate target names
+		if _, ok := targetNames[pair.to]; ok {
+			die("Error: Multiple files are being renamed to '%s', which is unsupported.\n", pair.to)
+		}
+		targetNames[pair.to] = pair.from
 	}
 }
 
@@ -106,14 +118,18 @@ func report(to_rename []FilePair) {
 			return
 		}
 		if user_input == "no" {
-			fmt.Println("Operation aborted by user.")
-			cleanup_afterwards = false
-			panic(Exit{1})
+			die("Operation aborted by user.")
 		}
 		if user_input == "diff" {
 			show_diff(to_rename)
 		}
 	}
+}
+
+func die(s string, a ...any) {
+	fmt.Printf(s, a...)
+	cleanup_afterwards = false
+	panic(Exit{1})
 }
 
 func prompt_user() string {
