@@ -58,7 +58,7 @@ func main() {
 			to_rename = append(to_rename, FilePair{from: files[i], to: new_filenames[i]})
 		}
 	}
-	assert_no_swap(to_rename)
+	assert_no_conflicts(to_rename)
 
 	report(to_rename)
 	errors := rename(to_rename)
@@ -70,30 +70,27 @@ func main() {
 	}
 }
 
-func assert_no_swap(to_rename []FilePair) {
-	targetNames := make(map[string]string)
-	sourceNames := make(map[string]bool)
-
-	// Create set of sources
-	for _, pair := range to_rename {
-		sourceNames[pair.from] = true
-	}
+func assert_no_conflicts(to_rename []FilePair) {
+	targetNames := make(map[string]bool)
 
 	for _, pair := range to_rename {
 		if pair.to == pair.from {
 			continue
 		}
 
-		// Check if the target name already exists as a source
-		if sourceNames[pair.to] {
-			die("Error: Filename '%s' is both a destination and a source, which is unsupported.\n", pair.to)
+		// Check if the target name already exists
+		if _, err := os.Stat(pair.to); err == nil {
+			die("Error: Destination file '%s' already exists.\n", pair.to)
+		} else if !os.IsNotExist(err) {
+			// some other error occurred while checking the file
+			die("Error: Could not stat destination file '%s': %v\n", pair.to, err)
 		}
 
 		// Check for duplicate target names
-		if _, ok := targetNames[pair.to]; ok {
+		if targetNames[pair.to] {
 			die("Error: Multiple files are being renamed to '%s', which is unsupported.\n", pair.to)
 		}
-		targetNames[pair.to] = pair.from
+		targetNames[pair.to] = true
 	}
 }
 
