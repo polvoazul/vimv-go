@@ -110,14 +110,12 @@ func report(to_rename []FilePair) {
 	}
 
 	for {
-		user_input := prompt_user()
-		if user_input == "yes" {
+		switch prompt_user() {
+		case ResponseYes:
 			return
-		}
-		if user_input == "no" {
+		case ResponseNo:
 			die("Operation aborted by user.")
-		}
-		if user_input == "diff" {
+		case ResponseDiff:
 			show_diff(to_rename)
 		}
 	}
@@ -129,7 +127,15 @@ func die(s string, a ...any) {
 	panic(Exit{1})
 }
 
-func prompt_user() string {
+type UserResponse int
+
+const (
+	ResponseYes UserResponse = iota
+	ResponseNo
+	ResponseDiff
+)
+
+func prompt_user() UserResponse {
 	// Confirm
 	fmt.Print("Press '(y)' to continue, 'd' to show name diff, 'n' to abort:")
 	var response string
@@ -141,13 +147,13 @@ func prompt_user() string {
 		}
 	}
 	if strings.ToLower(response) == "y" || response == "" {
-		return "yes"
+		return ResponseYes
 	}
 	if strings.ToLower(response) == "d" {
-		return "diff"
+		return ResponseDiff
 	}
 	// else
-	return "no"
+	return ResponseNo
 }
 
 func show_diff(pairs []FilePair) {
